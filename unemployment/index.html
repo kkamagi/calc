@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>실업급여 계산기 — 하루 얼마, 며칠분, 언제까지</title>
+<meta name="description" content="고용보험법 조문 그대로 계산합니다. 1일 구직급여액, 소정급여일수, 총 예상 수급액. 근속·나이 경계에 걸려 30일분이 달라지는지까지 알려 줍니다.">
+<meta name="robots" content="index,follow">
+<meta property="og:title" content="실업급여 계산기">
+<meta property="og:description" content="1일 얼마, 며칠분, 언제까지. 근속·나이 경계까지 확인합니다.">
+<meta property="og:image" content="https://kkamagi.github.io/calc/unemployment/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="website">
+<style>
+:root{
+  --bg:#ffffff; --fg:#1a1c1e; --muted:#5f6368; --line:#e3e5e8;
+  --soft:#f6f7f9; --accent:#1a6b4a; --accent-soft:#e8f3ee;
+  --warn:#8a5a00; --warn-soft:#fdf5e3; --danger:#b3261e;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181b; --fg:#e8eaed; --muted:#9aa0a6; --line:#2e3135;
+    --soft:#1f2226; --accent:#5fbf92; --accent-soft:#1b2f26;
+    --warn:#e0b357; --warn-soft:#2c2417; --danger:#f2b8b5;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181b; --fg:#e8eaed; --muted:#9aa0a6; --line:#2e3135;
+  --soft:#1f2226; --accent:#5fbf92; --accent-soft:#1b2f26;
+  --warn:#e0b357; --warn-soft:#2c2417; --danger:#f2b8b5;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  line-height:1.6; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:640px; margin:0 auto; padding:20px 16px 64px}
+h1{font-size:1.5rem; margin:0 0 6px; letter-spacing:-.02em}
+.sub{color:var(--muted); font-size:.88rem; margin:0 0 24px}
+h2{font-size:1.02rem; margin:28px 0 10px; letter-spacing:-.01em}
+fieldset{border:1px solid var(--line); border-radius:10px; padding:14px; margin:0 0 16px}
+legend{font-size:.82rem; color:var(--muted); padding:0 6px}
+label{display:block; font-size:.86rem; margin:0 0 5px; color:var(--fg)}
+.hint{font-size:.78rem; color:var(--muted); margin:4px 0 0; line-height:1.5}
+input[type=date],input[type=number],input[type=text],select{
+  width:100%; padding:11px 12px; font-size:1rem; color:var(--fg);
+  background:var(--bg); border:1px solid var(--line); border-radius:8px;
+  font-family:inherit;
+}
+input:focus,select:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:transparent}
+.row{display:flex; gap:10px; flex-wrap:wrap}
+.row>div{flex:1 1 160px; min-width:0}
+.field{margin:0 0 14px}
+.check{display:flex; align-items:flex-start; gap:8px; font-size:.86rem; margin:0 0 4px}
+.check input{width:auto; margin-top:3px}
+.modes{display:flex; gap:6px; margin:0 0 14px; flex-wrap:wrap}
+.modes button{
+  flex:1 1 auto; padding:9px 10px; font-size:.85rem; cursor:pointer;
+  background:var(--soft); color:var(--muted); border:1px solid var(--line);
+  border-radius:8px; font-family:inherit;
+}
+.modes button[aria-pressed=true]{background:var(--accent-soft); color:var(--accent); border-color:var(--accent); font-weight:600}
+button.go{
+  width:100%; padding:14px; font-size:1.02rem; font-weight:700; cursor:pointer;
+  background:var(--accent); color:#fff; border:0; border-radius:10px; font-family:inherit;
+}
+:root[data-theme="dark"] button.go, :root:not([data-theme="light"]) button.go{color:#0d1f17}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) button.go{color:#fff}}
+table{width:100%; border-collapse:collapse; font-size:.88rem; margin:10px 0}
+th,td{padding:8px 6px; border-bottom:1px solid var(--line); text-align:left}
+th{color:var(--muted); font-weight:500; font-size:.82rem}
+td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
+.out{border:1px solid var(--accent); background:var(--accent-soft); border-radius:10px; padding:18px; margin:18px 0}
+.out .big{font-size:1.85rem; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums; margin:2px 0 0}
+.out .lbl{font-size:.82rem; color:var(--muted)}
+.out .sec{font-size:.9rem; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); font-variant-numeric:tabular-nums}
+.duo{display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
+.duo>div{flex:1 1 130px}
+.duo .n{font-size:1.15rem; font-weight:700; font-variant-numeric:tabular-nums}
+.note{background:var(--warn-soft); color:var(--warn); border-radius:8px; padding:11px 13px; font-size:.83rem; margin:14px 0; line-height:1.55}
+.err{background:var(--warn-soft); color:var(--danger); border-radius:8px; padding:11px 13px; font-size:.86rem; margin:12px 0}
+details{border:1px solid var(--line); border-radius:8px; padding:11px 13px; margin:14px 0; font-size:.88rem}
+summary{cursor:pointer; color:var(--muted); font-size:.86rem}
+details[open] summary{margin-bottom:8px}
+.scroll{overflow-x:auto}
+footer{margin-top:36px; padding-top:18px; border-top:1px solid var(--line); font-size:.8rem; color:var(--muted); line-height:1.7}
+footer a{color:var(--accent)}
+.hidden{display:none}
+.seg{font-variant-numeric:tabular-nums}
+.mini{font-size:.82rem; color:var(--muted); font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>실업급여 계산기</h1>
+<p class="sub">고용보험법 조문 그대로 계산합니다. <strong>하루 얼마</strong>인지보다 <strong>며칠분</strong>인지가 총액을 정합니다 — 근속·나이 경계에 걸려 30일분이 달라지는지까지 함께 봅니다.</p>
+
+<form id="f" novalidate>
+
+<fieldset>
+<legend>1. 이직일과 나이</legend>
+<div class="row">
+  <div class="field">
+    <label for="quitDate">이직일</label>
+    <input type="date" id="quitDate" required>
+    <p class="hint">마지막 근무일의 <strong>다음 날</strong>입니다. 8월 19일이 마지막 출근이면 8월 20일.</p>
+  </div>
+  <div class="field">
+    <label for="birth">생년월일</label>
+    <input type="date" id="birth" required>
+    <p class="hint">이직일 현재 <strong>만 나이</strong>로 급여일수가 갈립니다(별표 1).</p>
+  </div>
+</div>
+<label class="check"><input type="checkbox" id="disabled">
+  <span>장애인입니다 (「장애인고용촉진 및 직업재활법」 제2조제1호)<br>
+  <span class="hint">별표 1 비고에 따라 나이와 무관하게 50세 이상으로 보아 적용합니다.</span></span></label>
+</fieldset>
+
+<fieldset>
+<legend>2. 고용보험 가입기간 (피보험기간)</legend>
+<div class="modes" role="group" aria-label="가입기간 입력 방식">
+  <button type="button" id="pDate" aria-pressed="true">입사일로 계산</button>
+  <button type="button" id="pManual" aria-pressed="false">기간을 직접 넣기</button>
+</div>
+<div id="pDateBox">
+  <div class="field">
+    <label for="joinDate">입사일 (피보험자격 취득일)</label>
+    <input type="date" id="joinDate">
+  </div>
+</div>
+<div id="pManualBox" class="hidden">
+  <div class="row">
+    <div class="field"><label for="py">년</label><input type="number" id="py" min="0" step="1" inputmode="numeric" placeholder="예: 3"></div>
+    <div class="field"><label for="pm">개월</label><input type="number" id="pm" min="0" max="11" step="1" inputmode="numeric" placeholder="예: 5"></div>
+  </div>
+</div>
+<p class="hint"><strong>이전 직장 기간이 합산될 수 있습니다.</strong> 앞 직장을 그만둔 날부터 3년 안에 다시 취업했다면 앞 직장의 피보험기간을 합산합니다(법 제50조제4항제1호). 다만 그때 실업급여를 이미 받았다면 그 기간은 빠집니다.</p>
+</fieldset>
+
+<fieldset>
+<legend>3. 이직 전 3개월 임금 (세전)</legend>
+<div class="modes" role="group" aria-label="임금 입력 방식">
+  <button type="button" id="mSimple" aria-pressed="true">월급이 매달 같아요</button>
+  <button type="button" id="mDetail" aria-pressed="false">기간별로 직접 넣을게요</button>
+</div>
+<div id="simpleBox">
+  <div class="field">
+    <label for="monthPay">월 급여 (세전, 기본급+수당 합계)</label>
+    <input type="number" id="monthPay" min="0" step="1" inputmode="numeric" placeholder="예: 3000000">
+    <p class="hint">상여금·연차수당도 평균임금에 들어가지만 산입 방식이 사업장마다 달라 여기서는 월 급여만 받습니다. 어차피 대부분 하한액에 걸립니다 — 아래 결과에서 확인됩니다.</p>
+  </div>
+</div>
+<div id="detailBox" class="hidden">
+  <p class="hint" style="margin-bottom:10px">이직일을 넣으면 기간이 자동으로 나뉩니다.</p>
+  <div id="segs"></div>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>4. 1일 소정근로시간</legend>
+<div class="field">
+  <label for="hours">하루 몇 시간 일하기로 정해져 있었습니까</label>
+  <select id="hours">
+    <option value="8" selected>8시간 (주 40시간 · 전일제)</option>
+    <option value="7">7시간</option>
+    <option value="6">6시간</option>
+    <option value="5">5시간</option>
+    <option value="4">4시간</option>
+    <option value="3">3시간</option>
+    <option value="0">주 소정근로시간으로 계산할게요</option>
+  </select>
+  <p class="hint">실제로 일한 시간이 아니라 <strong>일하기로 정한 시간</strong>입니다. 연장근로는 빼고 셉니다. 이 값이 하한액을 정합니다 — 짧으면 하한액도 함께 내려갑니다.</p>
+</div>
+<div id="weekBox" class="hidden">
+  <div class="row">
+    <div class="field"><label for="wHours">주 소정근로시간</label><input type="number" id="wHours" min="0" step="0.5" inputmode="decimal" placeholder="예: 20"></div>
+    <div class="field"><label for="wPaid">주휴 등 유급휴일 시간</label><input type="number" id="wPaid" min="0" step="0.5" inputmode="decimal" placeholder="예: 4"></div>
+  </div>
+  <p class="hint">시행규칙 제91조의2제1항제2호: (주 소정근로시간 + 유급휴일 시간) ÷ 48 × 8시간. 주 15시간 이상이면 주휴가 유급으로 붙습니다.</p>
+</div>
+</fieldset>
+
+<details>
+<summary>통상임금을 아는 경우 (선택)</summary>
+<div class="field" style="margin-top:12px">
+  <label for="comPay">1일 통상임금</label>
+  <input type="number" id="comPay" min="0" step="1" inputmode="numeric" placeholder="모르면 비워 두세요">
+  <p class="hint">평균임금이 통상임금보다 적으면 <strong>통상임금을 기초일액으로 합니다</strong>(법 제45조제2항). 모르면 비워 두면 됩니다.</p>
+</div>
+</details>
+
+<button type="submit" class="go">계산하기</button>
+</form>
+
+<div id="result"></div>
+
+<footer>
+<p><strong>이 계산기가 쓰는 식</strong><br>
+기초일액 = 이직 전 3개월 임금총액 ÷ 그 기간의 총일수 (통상임금이 더 크면 통상임금)<br>
+구직급여일액 = 기초일액 × 60% — 상한·하한을 벗어나면 상한액 또는 하한액<br>
+총 예상액 = 구직급여일액 × 소정급여일수</p>
+<p><strong>근거 조문</strong> — 기초일액과 최저기초일액: 고용보험법 제45조제1항·제2항·제4항·제5항. 구직급여일액 60%·최저구직급여일액 80%·하한 보장: 같은 법 제46조제1항·제2항. 소정급여일수: 같은 법 제50조제1항 및 별표 1. 급여기초 임금일액 상한액 11만 3,500원: 같은 법 시행령 제68조제1항(2026년 1월 1일 시행, 대통령령 제35934호). 1일 소정근로시간 산정: 같은 법 시행규칙 제91조의2. 대기기간 7일: 법 제49조제1항. 수급기간 12개월: 법 제48조제1항. 조문 원문은 국가법령정보센터 공개 API로 받아 대조했습니다(확인일 2026-08-20).</p>
+<p><strong>상한액·하한액은 이직일을 기준으로 갈립니다.</strong> 2026년 1월 1일 시행 시행령 부칙 제4조가 "이 영 시행 전에 이직한 사람"에게는 종전 규정을 적용하도록 정하고 있습니다. 신청일이 아니라 이직일입니다.</p>
+<p><strong>이 계산기가 판정하지 않는 것</strong> — 수급자격 자체는 계산으로 나오지 않습니다. 이직 전 18개월 동안 피보험단위기간이 180일 이상이어야 하고(법 제40조제1항제1호), 그 180일은 달력 날짜가 아니라 <strong>보수 지급의 기초가 된 날</strong>을 합한 것입니다(법 제41조). 자발적 이직은 원칙적으로 제한되며(법 제58조), 예외 사유는 시행규칙 별표 2에 있습니다.</p>
+<p>계산은 브라우저 안에서만 이루어집니다. 입력한 값은 어디에도 전송되거나 저장되지 않습니다.</p>
+<p>이 계산기는 참고용이며 법적 효력이 없습니다. 실제 지급액과 수급자격은 관할 고용센터의 판단에 따릅니다.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ── 연도별 상수 ──────────────────────────────────────────────
+// 최저임금: 최저임금위원회 고시. 하한액(최저구직급여일액)이 여기서 나온다.
+var MINWAGE = {2026:10320, 2025:10030};
+// 급여기초 임금일액 상한액: 고용보험법 시행령 제68조제1항.
+// 2026-01-01 시행(대통령령 35934)으로 11만원 → 11만3500원. 부칙 제4조에 따라 이직일 기준.
+function baseCap(q){
+  if(q.js >= new Date(2026,0,1)) return 113500;
+  if(q.js >= new Date(2025,0,1)) return 110000;
+  return 0;   // 그 전 이직은 수급기간(12개월)이 이미 끝났다 — 계산을 막는다
+}
+function minWage(q){ return MINWAGE[q.y] || 0; }
+
+// ── 날짜 유틸 (퇴직금 계산기와 같은 구현) ──────────────────────
+function maxDay(y,m){ return new Date(y,m,0).getDate(); }
+function isLeap(y){ return (y%4===0 && y%100!==0) || y%400===0; }
+function shiftMonth(y,m,delta){
+  var mm=m+delta, yy=y;
+  while(mm<1){ mm+=12; yy-=1; }
+  while(mm>12){ mm-=12; yy+=1; }
+  return {y:yy,m:mm};
+}
+function mkDate(y,m,d){ return new Date(y,m-1,d); }
+function parseDate(v){
+  if(!v) return null;
+  var p=v.split("-");
+  if(p.length!==3) return null;
+  var y=+p[0], m=+p[1], d=+p[2];
+  if(!y||!m||!d) return null;
+  return {y:y,m:m,d:d,js:mkDate(y,m,d)};
+}
+function fmtYMD(o){ return o.y+"."+String(o.m).padStart(2,"0")+"."+String(o.d).padStart(2,"0"); }
+function fmtJS(d){ return d.getFullYear()+"."+String(d.getMonth()+1).padStart(2,"0")+"."+String(d.getDate()).padStart(2,"0"); }
+function dayDiff(a,b){ return Math.ceil((b-a)/86400000); }
+function won(n){ return Math.round(n).toLocaleString("ko-KR"); }
+function dec2(n){ return n.toLocaleString("ko-KR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+// 평균임금 산정기간 분할 — 고용노동부 retire_cal.js 와 같은 규칙
+function buildSegments(D){
+  var y=D.y, m=D.m, d=D.d;
+  var idx = (d===1) ? 3 : 4;
+  if(m===5 && (d===31 || d===30 || (d===29 && !isLeap(y)))) idx=3;
+  var segs=[];
+  if(idx===3){
+    if(d===1){
+      var base=shiftMonth(y,m,-1);
+      for(var i=2;i>=0;i--){
+        var t=shiftMonth(base.y,base.m,-i);
+        segs.push({s:{y:t.y,m:t.m,d:1}, e:{y:t.y,m:t.m,d:maxDay(t.y,t.m)}});
+      }
+    }else{
+      for(var j=2;j>=1;j--){
+        var t2=shiftMonth(y,m,-j);
+        segs.push({s:{y:t2.y,m:t2.m,d:1}, e:{y:t2.y,m:t2.m,d:maxDay(t2.y,t2.m)}});
+      }
+      segs.push({s:{y:y,m:m,d:1}, e:{y:y,m:m,d:d-1}});
+    }
+  }else{
+    var p1=shiftMonth(y,m,-3);
+    var mx1=maxDay(p1.y,p1.m);
+    var sd=d;
+    if(d>mx1) sd = mx1 - (maxDay(y,m)-d);
+    segs.push({s:{y:p1.y,m:p1.m,d:sd}, e:{y:p1.y,m:p1.m,d:mx1}});
+    for(var k=2;k>=1;k--){
+      var t3=shiftMonth(y,m,-k);
+      segs.push({s:{y:t3.y,m:t3.m,d:1}, e:{y:t3.y,m:t3.m,d:maxDay(t3.y,t3.m)}});
+    }
+    segs.push({s:{y:y,m:m,d:1}, e:{y:y,m:m,d:d-1}});
+  }
+  segs.forEach(function(g){
+    g.days = dayDiff(mkDate(g.s.y,g.s.m,g.s.d), mkDate(g.e.y,g.e.m,g.e.d)) + 1;
+    g.monthDays = maxDay(g.s.y,g.s.m);
+  });
+  return segs;
+}
+
+// ── 만 나이 ──────────────────────────────────────────────────
+function ageAt(birth, at){
+  var a = at.y - birth.y;
+  if(at.m < birth.m || (at.m===birth.m && at.d < birth.d)) a -= 1;
+  return a;
+}
+// 다음 생일까지 남은 일수 (이직일 기준)
+function daysToBirthday(birth, at, targetAge){
+  var y = birth.y + targetAge;
+  var d = mkDate(y, birth.m, birth.d);
+  return dayDiff(at.js, d);
+}
+
+// ── 소정급여일수 (고용보험법 별표 1) ────────────────────────
+// 피보험기간 구간: 1년 미만 / 1~3년 / 3~5년 / 5~10년 / 10년 이상
+// 경계는 일수(365×N)로 재면 윤년이 낀 구간에서 하루 어긋나 30일분이 잘못 나온다.
+// 초일을 산입한 민법식 기간으로 잰다 — 입사일 + N년 − 1일이 이직일 이하이면 N년을 채운 것이다.
+// (공식 모의계산 실측: 2023-08-21~2026-08-20 = 3년 이상 180일, 2023-08-22~2026-08-20 = 3년 미만 150일)
+var TIERS = [
+  {name:"1년 미만",         yrs:0,  under:[120,120]},
+  {name:"1년 이상 3년 미만", yrs:1,  under:[150,180]},
+  {name:"3년 이상 5년 미만", yrs:3,  under:[180,210]},
+  {name:"5년 이상 10년 미만",yrs:5,  under:[210,240]},
+  {name:"10년 이상",         yrs:10, under:[240,270]}
+];
+// 입사일 J 로부터 만 n년을 채우는 마지막 날(= 이 날 이직하면 n년 이상)
+function tierEdge(J, n){
+  var y=J.y+n, m=J.m, d=J.d;
+  var md=maxDay(y,m); if(d>md) d=md;          // 2/29 입사 → 평년은 2/28
+  var t=mkDate(y,m,d); t.setDate(t.getDate()-1);
+  return t;
+}
+function tierByDate(J, Q){
+  for(var k=TIERS.length-1;k>=1;k--){
+    if(Q.js >= tierEdge(J, TIERS[k].yrs)) return k;
+  }
+  return 0;
+}
+function tierByMonths(months){
+  for(var k=TIERS.length-1;k>=1;k--){
+    if(months >= TIERS[k].yrs*12) return k;
+  }
+  return 0;
+}
+function benefitDays(ti, senior){
+  return TIERS[ti].under[senior?1:0];
+}
+
+// ── 화면 ────────────────────────────────────────────────────
+var $=function(id){ return document.getElementById(id); };
+var simple=true, byDate=true;
+
+function setWage(s){
+  simple=s;
+  $("mSimple").setAttribute("aria-pressed", s?"true":"false");
+  $("mDetail").setAttribute("aria-pressed", s?"false":"true");
+  $("simpleBox").className = s?"":"hidden";
+  $("detailBox").className = s?"hidden":"";
+  if(!s) renderSegs();
+}
+$("mSimple").onclick=function(){ setWage(true); };
+$("mDetail").onclick=function(){ setWage(false); };
+
+function setPeriod(b){
+  byDate=b;
+  $("pDate").setAttribute("aria-pressed", b?"true":"false");
+  $("pManual").setAttribute("aria-pressed", b?"false":"true");
+  $("pDateBox").className = b?"":"hidden";
+  $("pManualBox").className = b?"hidden":"";
+}
+$("pDate").onclick=function(){ setPeriod(true); };
+$("pManual").onclick=function(){ setPeriod(false); };
+
+$("hours").addEventListener("change", function(){
+  $("weekBox").className = (this.value==="0") ? "" : "hidden";
+});
+
+function renderSegs(){
+  var D=parseDate($("quitDate").value);
+  var box=$("segs");
+  if(!D){ box.innerHTML='<p class="hint">이직일을 먼저 넣어 주세요.</p>'; return; }
+  var segs=buildSegments(D), h="";
+  segs.forEach(function(g,i){
+    var prev = document.getElementById("seg"+i);
+    var val = prev ? prev.value : "";
+    h += '<div class="field"><label for="seg'+i+'">'+fmtYMD(g.s)+' ~ '+fmtYMD(g.e)+
+         ' <span class="hint" style="display:inline">('+g.days+'일)</span></label>'+
+         '<input type="number" id="seg'+i+'" min="0" step="1" inputmode="numeric" value="'+val+'" placeholder="이 기간에 받은 세전 금액"></div>';
+  });
+  box.innerHTML=h;
+}
+$("quitDate").addEventListener("change", function(){ if(!simple) renderSegs(); });
+
+function err(msg){
+  $("result").innerHTML='<div class="err">'+msg+'</div>';
+  $("result").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+// ── 계산 본체 ────────────────────────────────────────────────
+function compute(o){
+  // o: {quit, age, disabled, tier, hours, wage3(3개월 임금총액), totalDay, comPay}
+  var cap = baseCap(o.quit);
+  var mw  = minWage(o.quit);
+  var minBase = o.hours * mw;              // 최저기초일액 (법 제45조제4항)
+  var minDaily = Math.floor(minBase*0.8);  // 최저구직급여일액 (법 제46조제1항제2호)
+  var capDaily = Math.floor(cap*0.6);      // 상한에 걸렸을 때의 구직급여일액
+
+  var avg = Math.floor(o.wage3 / o.totalDay);   // 평균임금 (근로기준법 제2조제1항제6호) — 원 단위 절사
+  var base = avg, usedCom=false;
+  if(o.comPay>0 && base<o.comPay){ base=o.comPay; usedCom=true; }   // 법 제45조제2항
+
+  var reason, daily, cappedBase=base;
+  if(base > cap){                                   // 영 제68조제1항
+    cappedBase = cap;
+    daily = capDaily;
+    reason = "cap";
+  }else if(base < minBase){                         // 법 제45조제4항 → 제46조제1항제2호
+    cappedBase = minBase;
+    daily = minDaily;
+    reason = "minbase";
+  }else{
+    daily = Math.floor(base*0.6);                   // 법 제46조제1항제1호
+    reason = "rate60";
+    if(daily < minDaily){ daily = minDaily; reason="floor"; }   // 법 제46조제2항
+  }
+
+  var senior = o.disabled || (o.age>=50);
+  var days = benefitDays(o.tier, senior);
+
+  return {
+    avg:avg, base:base, usedCom:usedCom, cappedBase:cappedBase,
+    cap:cap, minWage:mw, minBase:minBase, minDaily:minDaily, capDaily:capDaily,
+    daily:daily, reason:reason, senior:senior, days:days, total:daily*days
+  };
+}
+
+$("f").addEventListener("submit", function(ev){
+  ev.preventDefault();
+
+  var Q=parseDate($("quitDate").value);
+  var B=parseDate($("birth").value);
+  if(!Q) return err("이직일을 넣어 주세요.");
+  if(!B) return err("생년월일을 넣어 주세요.");
+  if(B.js>=Q.js) return err("생년월일이 이직일보다 뒤입니다. 날짜를 확인해 주세요.");
+  if(!baseCap(Q)) return err("2025년 이전에 이직한 경우는 다루지 않습니다. 수급기간(이직일 다음 날부터 12개월)이 이미 끝났습니다.");
+  if(!minWage(Q)) return err(Q.y+"년 최저임금이 이 계산기에 아직 들어 있지 않습니다. 이직일을 확인해 주세요.");
+
+  var age = ageAt(B, Q);
+
+  // 1일 소정근로시간
+  var hours = +$("hours").value;
+  var weekCalc = null;
+  if(hours===0){
+    var wh=+($("wHours").value||0), wp=+($("wPaid").value||0);
+    if(!wh) return err("주 소정근로시간을 넣어 주세요.");
+    hours = (wh+wp)/48*8;                       // 시행규칙 제91조의2제1항제2호
+    weekCalc = {wh:wh, wp:wp, raw:hours};
+    if(hours>8) hours=8;                        // 1일 소정근로시간은 8시간을 넘지 못한다
+    if(hours<=0) return err("1일 소정근로시간이 0으로 계산됩니다. 입력값을 확인해 주세요.");
+  }
+
+  // 피보험기간 — 경계는 날짜로 잰다(위 tierByDate 주석 참고)
+  var ti=0, joinTxt="", J=null;
+  if(byDate){
+    J=parseDate($("joinDate").value);
+    if(!J) return err("입사일을 넣어 주세요. (또는 '기간을 직접 넣기'로 바꾸세요)");
+    if(J.js>=Q.js) return err("입사일이 이직일보다 뒤입니다.");
+    ti = tierByDate(J, Q);
+    joinTxt = fmtYMD(J)+" ~ "+fmtYMD(Q)+" ("+dayDiff(J.js,Q.js)+"일)";
+  }else{
+    var py=+($("py").value||0), pm=+($("pm").value||0);
+    var months = py*12+pm;
+    if(months<=0) return err("가입기간을 넣어 주세요.");
+    ti = tierByMonths(months);
+    joinTxt = py+"년 "+pm+"개월";
+  }
+
+  // 3개월 임금
+  var segs=buildSegments(Q), totalDay=0;
+  segs.forEach(function(g){ totalDay+=g.days; });
+  var wage3=0;
+  if(simple){
+    var mp=+($("monthPay").value||0);
+    if(!mp) return err("월 급여를 넣어 주세요.");
+    segs.forEach(function(g){ g.pay = mp*(g.days/g.monthDays); wage3 += g.pay; });
+  }else{
+    var any=false;
+    segs.forEach(function(g,i){
+      var el=document.getElementById("seg"+i);
+      var v = el ? +(el.value||0) : 0;
+      if(v>0) any=true;
+      g.pay=v; wage3+=v;
+    });
+    if(!any) return err("기간별 임금을 하나 이상 넣어 주세요.");
+  }
+
+  var r = compute({
+    quit:Q, birth:B, age:age, disabled:$("disabled").checked,
+    tier:ti, hours:hours, wage3:wage3, totalDay:totalDay,
+    comPay:+($("comPay").value||0)
+  });
+
+  // 수급기간: 이직일 다음 날부터 12개월
+  var limit = new Date(Q.js.getFullYear()+1, Q.js.getMonth(), Q.js.getDate());
+  var today = new Date(); today.setHours(0,0,0,0);
+  var leftDays = dayDiff(today, limit);
+
+  // ── 출력 ──
+  var h='';
+  h+='<div class="out">';
+  h+='<div class="lbl">총 예상 수급액</div>';
+  h+='<div class="big">'+won(r.total)+'원</div>';
+  h+='<div class="duo">';
+  h+='<div><div class="lbl">1일 구직급여액</div><div class="n">'+won(r.daily)+'원</div></div>';
+  h+='<div><div class="lbl">소정급여일수</div><div class="n">'+r.days+'일</div></div>';
+  h+='<div><div class="lbl">신청 마감</div><div class="n">'+fmtJS(limit)+'</div></div>';
+  h+='</div>';
+  h+='<div class="sec">'+won(r.daily)+'원 × '+r.days+'일 = '+won(r.total)+'원</div>';
+  h+='</div>';
+
+  // 어느 규정에 걸렸는지
+  if(r.reason==="cap"){
+    h+='<div class="note"><strong>상한액이 적용됐습니다.</strong> 기초일액 '+won(r.base)+'원이 시행령 제68조제1항의 상한 '+won(r.cap)+'원을 넘어, 상한액의 60%인 '+won(r.daily)+'원이 1일 구직급여액입니다. 월급이 더 올라도 이 금액은 바뀌지 않습니다.</div>';
+  }else if(r.reason==="minbase" || r.reason==="floor"){
+    if(r.reason==="floor"){
+      h+='<div class="note"><strong>하한액이 적용됐습니다.</strong> 기초일액 '+won(r.cappedBase)+'원의 60%는 '+won(Math.floor(r.cappedBase*0.6))+'원인데, 이 값이 최저구직급여일액 '+won(r.minDaily)+'원보다 낮아 <strong>하한액이 지급됩니다</strong>(법 제46조제2항). 기초일액이 '+won(Math.ceil(r.minDaily/0.6))+'원에 못 미치면 임금이 얼마든 하루 금액은 같습니다 — <strong>총액을 정하는 것은 며칠분을 받느냐입니다.</strong></div>';
+    }else{
+    h+='<div class="note"><strong>하한액이 적용됐습니다.</strong> 1일 '+won(r.daily)+'원은 이직일 당시 최저임금('+won(r.minWage)+'원) × 소정근로시간 '+(Math.round(hours*100)/100)+'시간 × 80%로 정해지는 <strong>최저구직급여일액</strong>입니다(법 제45조제4항·제46조). 이직 전 임금이 최저기초일액 '+won(r.minBase)+'원에 미치지 못해, 법 제45조제4항에 따라 최저기초일액을 기초일액으로 보고 그 80%를 지급합니다.</div>';
+    }
+  }
+
+  // 경계 경고 — 이 계산기의 핵심
+  var warns=[];
+  if(J && ti < TIERS.length-1){
+    var edge = tierEdge(J, TIERS[ti+1].yrs);          // 다음 칸을 채우는 첫 이직일
+    var need = dayDiff(Q.js, edge);
+    var gain = TIERS[ti+1].under[r.senior?1:0] - r.days;
+    if(need>0 && need<=90 && gain>0){
+      warns.push('<strong>근속 경계까지 '+need+'일 남았습니다.</strong> 이직일이 '+fmtJS(edge)+' 이후였다면 피보험기간이 '+TIERS[ti+1].name+'이 되어 소정급여일수가 '+r.days+'일에서 '+TIERS[ti+1].under[r.senior?1:0]+'일로 늘어납니다 — '+won(gain*r.daily)+'원 차이입니다.');
+    }
+  }
+  if(!r.senior && age===49){
+    var toFifty = daysToBirthday(B, Q, 50);
+    if(toFifty>0 && toFifty<=90){
+      var seniorDays = benefitDays(ti, true);
+      if(seniorDays>r.days){
+        warns.push('<strong>만 50세 생일까지 '+toFifty+'일 남았습니다.</strong> 이직일이 생일 뒤였다면 별표 1의 "50세 이상" 칸이 적용되어 '+seniorDays+'일이 됩니다 — '+won((seniorDays-r.days)*r.daily)+'원 차이입니다. 연령은 <strong>이직일 현재</strong>로 봅니다.');
+      }
+    }
+  }
+  if(warns.length) h+='<div class="note">'+warns.join('<br><br>')+'</div>';
+
+  // 수급기간
+  if(leftDays<=0){
+    h+='<div class="err"><strong>수급기간이 이미 끝났습니다.</strong> 이직일 다음 날부터 12개월('+fmtJS(limit)+'까지)이 지나면 남은 날짜분은 받지 못합니다(법 제48조제1항).</div>';
+  }else if(leftDays < r.days+30){
+    h+='<div class="note"><strong>남은 수급기간이 소정급여일수보다 빠듯합니다.</strong> 신청 마감이 '+fmtJS(limit)+'인데 '+leftDays+'일 남았고 받을 날짜는 '+r.days+'일분입니다. 12개월이 끝나면 남은 날짜는 사라집니다 — 지금 신청하지 않으면 못 받는 부분이 생깁니다.</div>';
+  }
+
+  // 계산 과정
+  h+='<details><summary>계산 과정 보기</summary><div class="scroll"><table>';
+  h+='<tr><th>기간</th><th class="num">일수</th><th class="num">임금</th></tr>';
+  segs.forEach(function(g){
+    h+='<tr><td class="seg">'+fmtYMD(g.s)+' ~ '+fmtYMD(g.e)+'</td><td class="num">'+g.days+'일</td><td class="num">'+won(g.pay)+'</td></tr>';
+  });
+  h+='<tr><td><strong>임금총액</strong></td><td class="num"><strong>'+totalDay+'일</strong></td><td class="num"><strong>'+won(wage3)+'</strong></td></tr>';
+  h+='<tr><td><strong>평균임금</strong> <span class="hint" style="display:inline">('+won(wage3)+' ÷ '+totalDay+'일)</span></td><td class="num">—</td><td class="num"><strong>'+won(r.avg)+'</strong></td></tr>';
+  if(r.usedCom) h+='<tr><td>통상임금이 더 커서 기초일액으로 사용 <span class="hint" style="display:inline">(법 제45조제2항)</span></td><td class="num">—</td><td class="num">'+won(r.base)+'</td></tr>';
+  h+='<tr><td>기초일액 상한 <span class="hint" style="display:inline">(영 제68조제1항)</span></td><td class="num">—</td><td class="num">'+won(r.cap)+'</td></tr>';
+  h+='<tr><td>최저기초일액 <span class="hint" style="display:inline">('+(Math.round(hours*100)/100)+'시간 × '+won(r.minWage)+'원)</span></td><td class="num">—</td><td class="num">'+won(r.minBase)+'</td></tr>';
+  h+='<tr><td><strong>적용된 기초일액</strong></td><td class="num">—</td><td class="num"><strong>'+won(r.cappedBase)+'</strong></td></tr>';
+  if(r.reason==="floor"){
+    h+='<tr><td>그 60% <span class="hint" style="display:inline">(하한 '+won(r.minDaily)+'원에 미달)</span></td><td class="num">—</td><td class="num">'+won(Math.floor(r.cappedBase*0.6))+'</td></tr>';
+  }
+  var 근거 = {
+    cap:    "상한 기초일액의 60% · 영 제68조제1항",
+    minbase:"최저기초일액의 80% · 법 제45조제4항, 제46조제1항제2호",
+    floor:  "60%가 하한에 못 미쳐 하한액 · 법 제46조제2항",
+    rate60: "기초일액의 60% · 법 제46조제1항제1호"
+  }[r.reason];
+  h+='<tr><td><strong>1일 구직급여액</strong> <span class="hint" style="display:inline">('+근거+')</span></td><td class="num">—</td><td class="num"><strong>'+won(r.daily)+'</strong></td></tr>';
+  h+='</table></div>';
+  h+='<p class="hint">피보험기간 '+joinTxt+' → '+TIERS[ti].name+' · 이직일 현재 만 '+age+'세'+(r.senior?(($("disabled").checked)?' · 장애인으로 50세 이상 칸 적용':' · 50세 이상 칸 적용'):'')+' → 별표 1에 따라 '+r.days+'일.</p>';
+  if(weekCalc){
+    h+='<p class="hint">1일 소정근로시간 = ('+weekCalc.wh+'시간 + '+weekCalc.wp+'시간) ÷ 48 × 8 = '+(Math.round(weekCalc.raw*100)/100)+'시간'+(weekCalc.raw>8?' → 8시간으로 봅니다':'')+' (시행규칙 제91조의2제1항제2호).</p>';
+  }
+  h+='<p class="hint">1일 평균임금과 1일 구직급여액은 원 단위 미만을 버렸고, 총액은 <strong>버린 뒤의 일액</strong>에 일수를 곱했습니다 — 실제로 지급되는 방식입니다. 고용보험 모의계산기는 60% 구간에서 총액에 소수를 남겨 두어 수백 원까지 차이가 날 수 있습니다. 상한액·하한액은 이직일('+fmtYMD(Q)+') 기준으로 적용했습니다.</p>';
+  h+='</details>';
+
+  // 늘 붙는 안내
+  h+='<div class="note"><strong>이 금액을 받으려면 자격이 먼저 인정돼야 합니다.</strong> 이직 전 18개월 동안 피보험단위기간이 180일 이상이어야 하는데(법 제40조제1항제1호), 이 180일은 달력 날짜가 아니라 <strong>보수를 받은 날</strong>을 센 것입니다(법 제41조). 주 5일 근무에 주휴 하루가 유급이면 한 주에 6일씩 쌓여, 180일을 채우는 데 달력으로 210일이 걸립니다. 재직 6개월로 계산하고 그만두면 모자랍니다.</div>';
+  h+='<div class="note">신청 후 <strong>7일은 대기기간</strong>이라 지급되지 않고(법 제49조제1항), 소정급여일수는 대기기간이 끝난 다음 날부터 셉니다. 기산점은 이직일이 아니라 <strong>실업 신고일</strong>입니다 — 늦게 신고할수록 늦게 시작됩니다.</div>';
+
+  $("result").innerHTML=h;
+  $("result").scrollIntoView({behavior:"smooth", block:"nearest"});
+});
+
+// ── 자체 검증 (콘솔) ────────────────────────────────────────
+// 기대값은 고용보험 모의계산(work24) 서버 응답 실측과 고용보험법 별표 1 원문이다.
+(function selfTest(){
+  var ok=true;
+  function t(name, got, want){
+    var pass = (got===want);
+    if(!pass) ok=false;
+    console.log("[검증] "+name+" = "+got+" (기대 "+want+") → "+(pass?"일치":"불일치"));
+  }
+  function avgCase(quit, avgDaily, hours, tier, senior){
+    var q=parseDate(quit), segs=buildSegments(q), td=0;
+    segs.forEach(function(g){ td+=g.days; });
+    return compute({quit:q, tier:tier, disabled:false, age:senior?56:36,
+                    hours:hours, wage3:avgDaily*td, totalDay:td, comPay:0});
+  }
+  // 1) 2026년 이직 — 상·하한 (실측: 하한 66,048 / 상한 68,100)
+  t("2026 하한액", avgCase("2026-08-20", 90000, 8, 1, false).daily, 66048);
+  t("2026 상한액", avgCase("2026-08-20", 200000, 8, 1, false).daily, 68100);
+  // 2) 2025년 이직 — 상·하한 (실측: 64,192 / 66,000). 이직일로 갈린다
+  t("2025 하한액", avgCase("2025-08-20", 90000, 8, 1, false).daily, 64192);
+  t("2025 상한액", avgCase("2025-08-20", 200000, 8, 1, false).daily, 66000);
+  // 3) 상한은 기초일액 단계에 걸린다 (실측: 113,499 → 68,099 / 113,501 → 68,100)
+  t("상한 직전", avgCase("2026-08-20", 113499, 8, 1, false).daily, 68099);
+  t("상한 직후", avgCase("2026-08-20", 113501, 8, 1, false).daily, 68100);
+  // 4) 1일 소정근로시간 4시간 → 하한만 비례 축소, 상한은 그대로 (실측)
+  t("4시간 하한액", avgCase("2026-08-20", 50000, 4, 1, false).daily, 33024);
+  t("4시간 상한액", avgCase("2026-08-20", 200000, 4, 1, false).daily, 68100);
+  // 5) 공식 서버 실측 기준값 A — 만 36세·4년7개월·평균임금 112,000원
+  var A=avgCase("2026-08-20", 112000, 8, 2, false);
+  t("기준값A 일액", A.daily, 67200);
+  t("기준값A 일수", A.days, 180);
+  t("기준값A 총액", A.total, 12096000);
+  // 6) 공식 서버 실측 기준값 B — 만 56세·12년·평균임금 97,826원 → 하한
+  var B=avgCase("2026-08-20", 97826, 8, 4, true);
+  t("기준값B 일액", B.daily, 66048);
+  t("기준값B 일수", B.days, 270);
+  t("기준값B 총액", B.total, 17832960);
+  // 7) 별표 1
+  t("별표1 50세미만 3년", benefitDays(2, false), 180);
+  t("별표1 50세이상 10년", benefitDays(4, true), 270);
+  t("별표1 1년미만 50세이상", benefitDays(0, true), 120);
+  // 8) 피보험기간 경계 — 날짜로 재야 맞는다 (실측: 8/21 입사=3년 이상, 8/22 입사=3년 미만)
+  var Q=parseDate("2026-08-20");
+  t("경계 2023-08-21", tierByDate(parseDate("2023-08-21"), Q), 2);
+  t("경계 2023-08-22", tierByDate(parseDate("2023-08-22"), Q), 1);
+  // 일수 근사(365×N)라면 틀렸을 두 지점
+  t("경계 2016-08-22(10년)", tierByDate(parseDate("2016-08-22"), Q), 3);
+  t("경계 2025-08-21(1년)",  tierByDate(parseDate("2025-08-21"), Q), 1);
+  // 9) 만 나이 — 생일 당일이면 50세로 본다 (실측: 1976-08-20생 → 270일)
+  t("만나이 생일당일", ageAt(parseDate("1976-08-20"), Q), 50);
+  t("만나이 생일하루전", ageAt(parseDate("1976-08-21"), Q), 49);
+  console.log("[검증] 종합 → "+(ok?"전부 일치":"불일치 있음"));
+})();
+
+})();
+</script>
+</body>
+</html>
