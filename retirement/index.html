@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>퇴직금 계산기 — 상여금·연차수당·미산입기간까지</title>
+<meta name="description" content="고용노동부 계산기와 같은 방식으로 계산합니다. 상여금·연차수당 3/12 가산, 미산입기간 제외, 통상임금 비교까지 반영한 퇴직금 계산기.">
+<meta name="robots" content="index,follow">
+<meta property="og:title" content="퇴직금 계산기">
+<meta property="og:description" content="상여금·연차수당·미산입기간까지 반영해 계산합니다.">
+<meta property="og:type" content="website">
+<style>
+:root{
+  --bg:#ffffff; --fg:#1a1c1e; --muted:#5f6368; --line:#e3e5e8;
+  --soft:#f6f7f9; --accent:#1a6b4a; --accent-soft:#e8f3ee;
+  --warn:#8a5a00; --warn-soft:#fdf5e3; --danger:#b3261e;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181b; --fg:#e8eaed; --muted:#9aa0a6; --line:#2e3135;
+    --soft:#1f2226; --accent:#5fbf92; --accent-soft:#1b2f26;
+    --warn:#e0b357; --warn-soft:#2c2417; --danger:#f2b8b5;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181b; --fg:#e8eaed; --muted:#9aa0a6; --line:#2e3135;
+  --soft:#1f2226; --accent:#5fbf92; --accent-soft:#1b2f26;
+  --warn:#e0b357; --warn-soft:#2c2417; --danger:#f2b8b5;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  line-height:1.6; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:640px; margin:0 auto; padding:20px 16px 64px}
+h1{font-size:1.5rem; margin:0 0 6px; letter-spacing:-.02em}
+.sub{color:var(--muted); font-size:.88rem; margin:0 0 24px}
+h2{font-size:1.02rem; margin:28px 0 10px; letter-spacing:-.01em}
+fieldset{border:1px solid var(--line); border-radius:10px; padding:14px; margin:0 0 16px}
+legend{font-size:.82rem; color:var(--muted); padding:0 6px}
+label{display:block; font-size:.86rem; margin:0 0 5px; color:var(--fg)}
+.hint{font-size:.78rem; color:var(--muted); margin:4px 0 0; line-height:1.5}
+input[type=date],input[type=number],input[type=text]{
+  width:100%; padding:11px 12px; font-size:1rem; color:var(--fg);
+  background:var(--bg); border:1px solid var(--line); border-radius:8px;
+  font-family:inherit;
+}
+input:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:transparent}
+.row{display:flex; gap:10px; flex-wrap:wrap}
+.row>div{flex:1 1 160px; min-width:0}
+.field{margin:0 0 14px}
+.modes{display:flex; gap:6px; margin:0 0 14px; flex-wrap:wrap}
+.modes button{
+  flex:1 1 auto; padding:9px 10px; font-size:.85rem; cursor:pointer;
+  background:var(--soft); color:var(--muted); border:1px solid var(--line);
+  border-radius:8px; font-family:inherit;
+}
+.modes button[aria-pressed=true]{background:var(--accent-soft); color:var(--accent); border-color:var(--accent); font-weight:600}
+button.go{
+  width:100%; padding:14px; font-size:1.02rem; font-weight:700; cursor:pointer;
+  background:var(--accent); color:#fff; border:0; border-radius:10px; font-family:inherit;
+}
+:root[data-theme="dark"] button.go, :root:not([data-theme="light"]) button.go{color:#0d1f17}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) button.go{color:#fff}}
+table{width:100%; border-collapse:collapse; font-size:.88rem; margin:10px 0}
+th,td{padding:8px 6px; border-bottom:1px solid var(--line); text-align:left}
+th{color:var(--muted); font-weight:500; font-size:.82rem}
+td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
+.out{border:1px solid var(--accent); background:var(--accent-soft); border-radius:10px; padding:18px; margin:18px 0}
+.out .big{font-size:1.85rem; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums; margin:2px 0 0}
+.out .lbl{font-size:.82rem; color:var(--muted)}
+.out .sec{font-size:.9rem; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); font-variant-numeric:tabular-nums}
+.note{background:var(--warn-soft); color:var(--warn); border-radius:8px; padding:11px 13px; font-size:.83rem; margin:14px 0; line-height:1.55}
+.err{background:var(--warn-soft); color:var(--danger); border-radius:8px; padding:11px 13px; font-size:.86rem; margin:12px 0}
+details{border:1px solid var(--line); border-radius:8px; padding:11px 13px; margin:14px 0; font-size:.88rem}
+summary{cursor:pointer; color:var(--muted); font-size:.86rem}
+details[open] summary{margin-bottom:8px}
+.scroll{overflow-x:auto}
+footer{margin-top:36px; padding-top:18px; border-top:1px solid var(--line); font-size:.8rem; color:var(--muted); line-height:1.7}
+footer a{color:var(--accent)}
+.hidden{display:none}
+.seg{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>퇴직금 계산기</h1>
+<p class="sub">고용노동부 계산기와 <strong>같은 식</strong>으로 계산합니다. 상여금·연차수당 3/12 가산, 미산입기간 제외, 통상임금 비교까지 반영했습니다.</p>
+
+<form id="f" novalidate>
+
+<fieldset>
+<legend>1. 재직 기간</legend>
+<div class="row">
+  <div class="field">
+    <label for="inDate">입사일</label>
+    <input type="date" id="inDate" required>
+  </div>
+  <div class="field">
+    <label for="outDate">퇴사일</label>
+    <input type="date" id="outDate" required>
+    <p class="hint">마지막 근무일의 <strong>다음 날</strong>을 넣습니다. 8월 19일이 마지막 출근이면 8월 20일.</p>
+  </div>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>2. 퇴직 전 3개월 임금 (세전)</legend>
+<div class="modes" role="group" aria-label="입력 방식">
+  <button type="button" id="mSimple" aria-pressed="true">월급이 매달 같아요</button>
+  <button type="button" id="mDetail" aria-pressed="false">기간별로 직접 넣을게요</button>
+</div>
+
+<div id="simpleBox">
+  <div class="field">
+    <label for="monthPay">월 급여 (세전, 기본급+수당 합계)</label>
+    <input type="number" id="monthPay" min="0" step="1" inputmode="numeric" placeholder="예: 3000000">
+    <p class="hint">이 값을 각 기간의 일수에 맞춰 나눠 넣습니다. 달마다 수당이 달랐다면 오른쪽 방식이 정확합니다.</p>
+  </div>
+</div>
+
+<div id="detailBox" class="hidden">
+  <p class="hint" style="margin-bottom:10px">퇴사일을 넣으면 기간이 자동으로 나뉩니다.</p>
+  <div id="segs"></div>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>3. 상여금·연차수당 (해당 없으면 비워 둡니다)</legend>
+<div class="field">
+  <label for="bonus">연간 상여금 총액</label>
+  <input type="number" id="bonus" min="0" step="1" inputmode="numeric" placeholder="예: 4000000">
+  <p class="hint">퇴직 전 1년간 받은 상여금 전액을 넣습니다. 계산에는 이 중 <strong>3/12</strong>만 들어갑니다.</p>
+</div>
+<div class="field">
+  <label for="annual">연차수당</label>
+  <input type="number" id="annual" min="0" step="1" inputmode="numeric" placeholder="예: 300000">
+  <p class="hint"><strong>퇴직 전전년도에 생긴 연차 중 전년도에 안 쓴 것</strong>의 수당입니다. 퇴직하면서 정산받은 연차수당을 넣으면 값이 커집니다.</p>
+</div>
+</fieldset>
+
+<details>
+<summary>휴직·휴업이 있었거나 통상임금을 아는 경우 (선택)</summary>
+
+<div class="field" style="margin-top:12px">
+  <label for="comPay">1일 통상임금</label>
+  <input type="number" id="comPay" min="0" step="1" inputmode="numeric" placeholder="모르면 비워 두세요">
+  <p class="hint">평균임금이 통상임금보다 적으면 <strong>통상임금으로 계산합니다</strong>(근로기준법 제2조제2항). 모르면 비워 두면 됩니다.</p>
+</div>
+
+<div class="field">
+  <label>미산입기간 — 최근 3개월 안에 있었던 경우</label>
+  <div class="row">
+    <div><input type="date" id="ncvS" aria-label="미산입기간 시작"></div>
+    <div><input type="date" id="ncvE" aria-label="미산입기간 종료"></div>
+  </div>
+  <p class="hint">육아휴직, 출산전후휴가, 업무상 부상·질병 요양, 사용자 귀책 휴업, 수습 3개월, 쟁의행위, 병역의무 기간 등입니다(근로기준법 시행령 제2조제1항). <strong>비워 두면 실제보다 적게 나옵니다.</strong></p>
+</div>
+
+<div class="field">
+  <label>근무제외기간 — 재직일수에서 빠지는 기간</label>
+  <div class="row">
+    <div><input type="date" id="excS" aria-label="근무제외기간 시작"></div>
+    <div><input type="date" id="excE" aria-label="근무제외기간 종료"></div>
+  </div>
+  <p class="hint">개인 사정으로 인한 휴직 등입니다. 사유에 따라 갈리니 확실하지 않으면 비워 두십시오.</p>
+</div>
+</details>
+
+<button type="submit" class="go">계산하기</button>
+</form>
+
+<div id="result"></div>
+
+<footer>
+<p><strong>이 계산기가 쓰는 식</strong><br>
+1일 평균임금 = (3개월 임금총액 + 상여금×3/12 + 연차수당×3/12) ÷ 3개월 총일수<br>
+퇴직금 = 1일 평균임금 × 30일 × (재직일수 ÷ 365)</p>
+<p>근로자퇴직급여 보장법 제8조제1항, 근로기준법 제2조제1항제6호·제2항, 같은 법 시행령 제2조를 따릅니다. 고용노동부 계산기의 산정 방식(기간 분할, 소수 셋째자리 올림, 원 단위 반올림)을 그대로 구현해 공식 예제와 결과가 일치하는 것을 확인했습니다.</p>
+<p><strong>계산 결과는 세전입니다.</strong> 퇴직소득세는 빠져 있습니다. 세액은 국세청 홈택스의 퇴직소득 세액계산 프로그램에서 확인하십시오. 회사가 퇴직연금(DB·DC)에 가입돼 있으면 실제 수령액이 다를 수 있습니다.</p>
+<p>계산은 브라우저 안에서만 이루어집니다. 입력한 값은 어디에도 전송되거나 저장되지 않습니다.</p>
+<p>이 계산기는 참고용이며 법적 효력이 없습니다. 실제 지급액에 다툼이 있으면 관할 고용노동청에 문의하십시오.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ── 날짜 유틸 ────────────────────────────────────────────────
+function maxDay(y,m){ return new Date(y,m,0).getDate(); }          // m: 1-based
+function isLeap(y){ return (y%4===0 && y%100!==0) || y%400===0; }
+function shiftMonth(y,m,delta){
+  var mm=m+delta, yy=y;
+  while(mm<1){ mm+=12; yy-=1; }
+  while(mm>12){ mm-=12; yy+=1; }
+  return {y:yy,m:mm};
+}
+function mkDate(y,m,d){ return new Date(y,m-1,d); }
+function parseDate(v){
+  if(!v) return null;
+  var p=v.split("-");
+  if(p.length!==3) return null;
+  var y=+p[0], m=+p[1], d=+p[2];
+  if(!y||!m||!d) return null;
+  return {y:y,m:m,d:d,js:mkDate(y,m,d)};
+}
+function fmtYMD(o){ return o.y+"."+String(o.m).padStart(2,"0")+"."+String(o.d).padStart(2,"0"); }
+function dayDiff(a,b){ return Math.ceil((b-a)/86400000); }
+function won(n){ return Math.round(n).toLocaleString("ko-KR"); }
+function dec2(n){ return n.toLocaleString("ko-KR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+// ── 산정기간 분할 (고용노동부 retire_cal.js 로직) ──────────────
+// 퇴사일 D(마지막 근무일 +1) 기준으로 [D-3개월, D-1일] 을 월 경계로 쪼갠다.
+function buildSegments(D){
+  var y=D.y, m=D.m, d=D.d;
+  var idx = (d===1) ? 3 : 4;
+  // 5.29(평년)·5.30·5.31 은 2월을 건너뛰기 위해 3구간으로 강제한다.
+  if(m===5 && (d===31 || d===30 || (d===29 && !isLeap(y)))) idx=3;
+
+  var segs=[];
+  if(idx===3){
+    if(d===1){
+      // 직전 3개 역월 전체
+      var base=shiftMonth(y,m,-1);
+      for(var i=2;i>=0;i--){
+        var t=shiftMonth(base.y,base.m,-i);
+        segs.push({s:{y:t.y,m:t.m,d:1}, e:{y:t.y,m:t.m,d:maxDay(t.y,t.m)}});
+      }
+    }else{
+      // 5월 예외: 3월·4월 전체 + 5월 1일~(d-1)
+      for(var j=2;j>=1;j--){
+        var t2=shiftMonth(y,m,-j);
+        segs.push({s:{y:t2.y,m:t2.m,d:1}, e:{y:t2.y,m:t2.m,d:maxDay(t2.y,t2.m)}});
+      }
+      segs.push({s:{y:y,m:m,d:1}, e:{y:y,m:m,d:d-1}});
+    }
+  }else{
+    // 4구간: (m-3)월 d일~말일 / (m-2)월 / (m-1)월 / m월 1일~(d-1)
+    var p1=shiftMonth(y,m,-3);
+    var mx1=maxDay(p1.y,p1.m);
+    var sd=d;
+    if(d>mx1) sd = mx1 - (maxDay(y,m)-d);   // 말일 보정
+    segs.push({s:{y:p1.y,m:p1.m,d:sd}, e:{y:p1.y,m:p1.m,d:mx1}});
+    for(var k=2;k>=1;k--){
+      var t3=shiftMonth(y,m,-k);
+      segs.push({s:{y:t3.y,m:t3.m,d:1}, e:{y:t3.y,m:t3.m,d:maxDay(t3.y,t3.m)}});
+    }
+    segs.push({s:{y:y,m:m,d:1}, e:{y:y,m:m,d:d-1}});
+  }
+  segs.forEach(function(g){
+    g.days = dayDiff(mkDate(g.s.y,g.s.m,g.s.d), mkDate(g.e.y,g.e.m,g.e.d)) + 1;
+    g.monthDays = maxDay(g.s.y,g.s.m);
+  });
+  return segs;
+}
+
+// 두 기간의 겹치는 일수
+function overlapDays(aS,aE,bS,bE){
+  var s = aS>bS ? aS : bS;
+  var e = aE<bE ? aE : bE;
+  if(s>e) return 0;
+  return dayDiff(s,e)+1;
+}
+
+// ── 화면 ────────────────────────────────────────────────────
+var $=function(id){ return document.getElementById(id); };
+var simple=true;
+var curSegs=[];
+
+function setMode(s){
+  simple=s;
+  $("mSimple").setAttribute("aria-pressed", s?"true":"false");
+  $("mDetail").setAttribute("aria-pressed", s?"false":"true");
+  $("simpleBox").className = s?"":"hidden";
+  $("detailBox").className = s?"hidden":"";
+  if(!s) renderSegs();
+}
+$("mSimple").onclick=function(){ setMode(true); };
+$("mDetail").onclick=function(){ setMode(false); };
+
+function renderSegs(){
+  var D=parseDate($("outDate").value);
+  var box=$("segs");
+  if(!D){ box.innerHTML='<p class="hint">퇴사일을 먼저 넣어 주세요.</p>'; curSegs=[]; return; }
+  curSegs=buildSegments(D);
+  var h="";
+  curSegs.forEach(function(g,i){
+    var prev = document.getElementById("seg"+i);
+    var val = prev ? prev.value : "";
+    h += '<div class="field"><label for="seg'+i+'">'+fmtYMD(g.s)+' ~ '+fmtYMD(g.e)+
+         ' <span class="hint" style="display:inline">('+g.days+'일)</span></label>'+
+         '<input type="number" id="seg'+i+'" min="0" step="1" inputmode="numeric" value="'+val+'" placeholder="이 기간에 받은 세전 금액"></div>';
+  });
+  box.innerHTML=h;
+}
+$("outDate").addEventListener("change", function(){ if(!simple) renderSegs(); });
+
+function err(msg){
+  $("result").innerHTML='<div class="err">'+msg+'</div>';
+  $("result").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+$("f").addEventListener("submit", function(ev){
+  ev.preventDefault();
+
+  var S=parseDate($("inDate").value);
+  var D=parseDate($("outDate").value);
+  if(!S) return err("입사일을 넣어 주세요.");
+  if(!D) return err("퇴사일을 넣어 주세요.");
+  if(D.js<=S.js) return err("퇴사일이 입사일보다 뒤여야 합니다.");
+
+  // 재직일수
+  var termDays = dayDiff(S.js, D.js);
+
+  // 근무제외기간 → 재직일수에서만 차감
+  var excS=parseDate($("excS").value), excE=parseDate($("excE").value), excDays=0;
+  if(excS&&excE){
+    if(excE.js<excS.js) return err("근무제외기간의 종료일이 시작일보다 앞섭니다.");
+    excDays = dayDiff(excS.js, excE.js)+1;
+    termDays -= excDays;
+  }
+  if(termDays<=0) return err("재직일수가 0 이하입니다. 날짜를 확인해 주세요.");
+
+  var segs=buildSegments(D);
+  var totalDay=0;
+  segs.forEach(function(g){ totalDay+=g.days; });
+
+  // 미산입기간 → 분모(일수)와 분자(임금)에서 함께 제외
+  var ncvS=parseDate($("ncvS").value), ncvE=parseDate($("ncvE").value);
+  var periodStart=mkDate(segs[0].s.y,segs[0].s.m,segs[0].s.d);
+  var periodEnd=mkDate(segs[segs.length-1].e.y,segs[segs.length-1].e.m,segs[segs.length-1].e.d);
+  var ncvIn=0;
+  if(ncvS&&ncvE){
+    if(ncvE.js<ncvS.js) return err("미산입기간의 종료일이 시작일보다 앞섭니다.");
+    ncvIn = overlapDays(periodStart,periodEnd,ncvS.js,ncvE.js);
+    segs.forEach(function(g){
+      g.ncv = overlapDays(mkDate(g.s.y,g.s.m,g.s.d), mkDate(g.e.y,g.e.m,g.e.d), ncvS.js, ncvE.js);
+    });
+  }else{
+    segs.forEach(function(g){ g.ncv=0; });
+  }
+  var sumday = totalDay - ncvIn;
+  if(sumday<=0) return err("미산입기간이 산정기간 전체를 덮습니다. 이 경우는 개별 판단이 필요하니 고용노동청에 문의하십시오.");
+
+  // 임금총액
+  var wage=0;
+  if(simple){
+    var mp=+($("monthPay").value||0);
+    if(!mp) return err("월 급여를 넣어 주세요.");
+    segs.forEach(function(g){
+      var paid = g.days - g.ncv;                 // 미산입기간 임금은 제외
+      g.pay = mp * (paid / g.monthDays);
+      wage += g.pay;
+    });
+  }else{
+    if(!curSegs.length) renderSegs();
+    var any=false;
+    segs.forEach(function(g,i){
+      var el=document.getElementById("seg"+i);
+      var v = el ? +(el.value||0) : 0;
+      if(v>0) any=true;
+      g.pay=v; wage+=v;
+    });
+    if(!any) return err("기간별 임금을 하나 이상 넣어 주세요.");
+  }
+
+  // 상여금·연차수당: 3/12 = 0.25, 미산입기간이 있으면 sumday/totalDay 비율을 더 곱한다
+  var ratio = sumday/totalDay;
+  var bonus=+($("bonus").value||0);
+  var annual=+($("annual").value||0);
+  var bonusAdd = bonus*0.25*ratio;
+  var annualAdd = annual*0.25*ratio;
+
+  var total = wage + bonusAdd + annualAdd;
+
+  // 1일 평균임금: 소수 셋째자리 올림
+  var avg = Math.ceil(total/sumday*100)/100;
+
+  // 통상임금 비교
+  var com=+($("comPay").value||0);
+  var base=avg, usedCom=false;
+  if(com>0 && avg<com){ base=com; usedCom=true; }
+
+  var pay = Math.round(base*30*termDays/365);
+
+  // ── 출력 ──
+  var years=Math.floor(termDays/365), rest=termDays-years*365;
+  var h='';
+  h+='<div class="out">';
+  h+='<div class="lbl">예상 퇴직금 (세전)</div>';
+  h+='<div class="big">'+won(pay)+'원</div>';
+  h+='<div class="sec">1일 '+(usedCom?'통상':'평균')+'임금 <strong>'+(usedCom?won(base):dec2(base))+'원</strong> × 30일 × ('+termDays+'일 ÷ 365)</div>';
+  h+='</div>';
+
+  if(usedCom){
+    h+='<div class="note">평균임금('+dec2(avg)+'원)이 통상임금('+won(com)+'원)보다 적어 <strong>통상임금으로 계산했습니다</strong>. 근로기준법 제2조제2항에 따른 처리입니다.</div>';
+  }
+
+  // 수급 자격 경고
+  if(termDays<365){
+    h+='<div class="note"><strong>계속근로기간이 1년 미만입니다.</strong> 근로자퇴직급여 보장법 제4조제1항 단서에 따라 퇴직급여제도 설정 의무가 없습니다. 위 금액을 받지 못할 수 있습니다.</div>';
+  }
+
+  h+='<details open><summary>계산 과정 보기</summary><div class="scroll"><table>';
+  h+='<tr><th>기간</th><th class="num">일수</th><th class="num">임금</th></tr>';
+  segs.forEach(function(g){
+    var d1=fmtYMD(g.s), d2=fmtYMD(g.e);
+    var dayTxt = g.ncv>0 ? (g.days+'일 <span style="color:var(--warn)">−'+g.ncv+'</span>') : (g.days+'일');
+    h+='<tr><td class="seg">'+d1+' ~ '+d2+'</td><td class="num">'+dayTxt+'</td><td class="num">'+won(g.pay)+'</td></tr>';
+  });
+  h+='<tr><td><strong>임금 소계</strong></td><td class="num"><strong>'+sumday+'일</strong></td><td class="num"><strong>'+won(wage)+'</strong></td></tr>';
+  if(bonus>0) h+='<tr><td>상여금 가산 <span class="hint" style="display:inline">('+won(bonus)+' × 3/12'+(ratio<1?' × 비율':'')+')</span></td><td class="num">—</td><td class="num">'+won(bonusAdd)+'</td></tr>';
+  if(annual>0) h+='<tr><td>연차수당 가산 <span class="hint" style="display:inline">('+won(annual)+' × 3/12'+(ratio<1?' × 비율':'')+')</span></td><td class="num">—</td><td class="num">'+won(annualAdd)+'</td></tr>';
+  h+='<tr><td><strong>임금총액</strong></td><td class="num">—</td><td class="num"><strong>'+won(total)+'</strong></td></tr>';
+  h+='<tr><td><strong>1일 평균임금</strong> <span class="hint" style="display:inline">('+won(total)+' ÷ '+sumday+')</span></td><td class="num">—</td><td class="num"><strong>'+dec2(avg)+'</strong></td></tr>';
+  h+='</table></div>';
+  h+='<p class="hint">재직일수 '+termDays+'일'+(excDays>0?' (근무제외 '+excDays+'일 차감)':'')+' = 약 '+years+'년 '+rest+'일. 1일 평균임금은 소수 셋째자리에서 올림, 퇴직금은 원 단위 반올림합니다 — 고용노동부 계산기와 같은 처리입니다.</p>';
+  h+='</details>';
+
+  if(bonus===0 && annual===0){
+    h+='<div class="note">상여금과 연차수당을 넣지 않았습니다. 받은 적이 있다면 넣어야 합니다 — <strong>연간 금액의 3/12</strong>가 임금총액에 더해져 퇴직금이 올라갑니다.</div>';
+  }
+  if(!ncvS && !ncvE){
+    h+='<div class="note">최근 3개월 안에 육아휴직·출산휴가·산재요양·휴업이 있었다면 <strong>미산입기간</strong>을 넣어야 합니다. 비워 두면 그 기간이 분모에 그대로 들어가 실제보다 적게 나옵니다.</div>';
+  }
+
+  $("result").innerHTML=h;
+  $("result").scrollIntoView({behavior:"smooth", block:"nearest"});
+});
+
+// ── 자체 검증 (콘솔) — 고용노동부 공식 예제 ────────────────────
+(function selfTest(){
+  var D={y:2017,m:9,d:16}, S=mkDate(2014,10,2);
+  var segs=buildSegments(D), td=0;
+  segs.forEach(function(g){ td+=g.days; });
+  var term=dayDiff(S, mkDate(2017,9,16));
+  var total=7080000 + 4000000*0.25 + 300000*0.25;
+  var avg=Math.ceil(total/td*100)/100;
+  var pay=Math.round(avg*30*term/365);
+  var ok = (td===92 && term===1080 && avg===88641.31);
+  console.log("[검증] 총일수="+td+"(92) 재직일수="+term+"(1080) 일평균="+avg+"(88641.31) 퇴직금="+pay+" → "+(ok?"일치":"불일치"));
+})();
+
+})();
+</script>
+</body>
+</html>
