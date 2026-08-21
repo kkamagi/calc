@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>부가세 계산기 — 1만원을 1.1로 나누면 9,999원</title>
+<meta name="description" content="1만원을 1.1로 나누면 공급가액 9,090원 + 세액 909원 = 9,999원입니다. 끝수 절사로 원금이 복원되지 않는 자리를 그대로 보여 줍니다. 일반·간이·예정고지.">
+<meta name="robots" content="index,follow">
+<meta property="og:title" content="부가세 계산기">
+<meta property="og:description" content="1만원을 1.1로 나누면 9,999원입니다. 끝수 절사를 숨기지 않습니다.">
+<meta property="og:image" content="https://kkamagi.github.io/calc/vat/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="website">
+<style>
+:root{
+  --bg:#ffffff; --fg:#1a1c1e; --muted:#5f6368; --line:#e3e5e8;
+  --soft:#f6f7f9; --accent:#1a6b4a; --accent-soft:#e8f3ee;
+  --warn:#8a5a00; --warn-soft:#fdf5e3; --danger:#b3261e;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181b; --fg:#e8eaed; --muted:#9aa0a6; --line:#2e3135;
+    --soft:#1f2226; --accent:#5fbf92; --accent-soft:#1b2f26;
+    --warn:#e0b357; --warn-soft:#2c2417; --danger:#f2b8b5;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181b; --fg:#e8eaed; --muted:#9aa0a6; --line:#2e3135;
+  --soft:#1f2226; --accent:#5fbf92; --accent-soft:#1b2f26;
+  --warn:#e0b357; --warn-soft:#2c2417; --danger:#f2b8b5;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  line-height:1.6; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:640px; margin:0 auto; padding:20px 16px 64px}
+h1{font-size:1.5rem; margin:0 0 6px; letter-spacing:-.02em}
+.sub{color:var(--muted); font-size:.88rem; margin:0 0 24px}
+h2{font-size:1.02rem; margin:28px 0 10px; letter-spacing:-.01em}
+fieldset{border:1px solid var(--line); border-radius:10px; padding:14px; margin:0 0 16px}
+legend{font-size:.82rem; color:var(--muted); padding:0 6px}
+label{display:block; font-size:.86rem; margin:0 0 5px; color:var(--fg)}
+.hint{font-size:.78rem; color:var(--muted); margin:4px 0 0; line-height:1.5}
+input[type=date],input[type=number],input[type=text],select{
+  width:100%; padding:11px 12px; font-size:1rem; color:var(--fg);
+  background:var(--bg); border:1px solid var(--line); border-radius:8px;
+  font-family:inherit;
+}
+input:focus,select:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:transparent}
+.row{display:flex; gap:10px; flex-wrap:wrap}
+.row>div{flex:1 1 160px; min-width:0}
+.field{margin:0 0 14px}
+.modes{display:flex; gap:6px; margin:0 0 14px; flex-wrap:wrap}
+.modes button{
+  flex:1 1 auto; padding:9px 10px; font-size:.85rem; cursor:pointer;
+  background:var(--soft); color:var(--muted); border:1px solid var(--line);
+  border-radius:8px; font-family:inherit;
+}
+.modes button[aria-pressed=true]{background:var(--accent-soft); color:var(--accent); border-color:var(--accent); font-weight:600}
+button.go{
+  width:100%; padding:14px; font-size:1.02rem; font-weight:700; cursor:pointer;
+  background:var(--accent); color:#fff; border:0; border-radius:10px; font-family:inherit;
+}
+:root[data-theme="dark"] button.go, :root:not([data-theme="light"]) button.go{color:#0d1f17}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) button.go{color:#fff}}
+table{width:100%; border-collapse:collapse; font-size:.88rem; margin:10px 0}
+th,td{padding:8px 6px; border-bottom:1px solid var(--line); text-align:left}
+th{color:var(--muted); font-weight:500; font-size:.82rem}
+td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
+.out{border:1px solid var(--accent); background:var(--accent-soft); border-radius:10px; padding:18px; margin:18px 0}
+.out .big{font-size:1.85rem; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums; margin:2px 0 0}
+.out .lbl{font-size:.82rem; color:var(--muted)}
+.out .sec{font-size:.9rem; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); font-variant-numeric:tabular-nums}
+.duo{display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--line)}
+.duo>div{flex:1 1 130px}
+.duo .n{font-size:1.15rem; font-weight:700; font-variant-numeric:tabular-nums}
+.note{background:var(--warn-soft); color:var(--warn); border-radius:8px; padding:11px 13px; font-size:.83rem; margin:14px 0; line-height:1.55}
+.err{background:var(--warn-soft); color:var(--danger); border-radius:8px; padding:11px 13px; font-size:.86rem; margin:12px 0}
+details{border:1px solid var(--line); border-radius:8px; padding:11px 13px; margin:14px 0; font-size:.88rem}
+summary{cursor:pointer; color:var(--muted); font-size:.86rem}
+details[open] summary{margin-bottom:8px}
+.scroll{overflow-x:auto}
+footer{margin-top:36px; padding-top:18px; border-top:1px solid var(--line); font-size:.8rem; color:var(--muted); line-height:1.7}
+footer a{color:var(--accent)}
+.hidden{display:none}
+.seg{font-variant-numeric:tabular-nums}
+.mini{font-size:.82rem; color:var(--muted); font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>부가세 계산기</h1>
+<p class="sub">1만원을 1.1로 나누면 9,090원이 아닙니다. 공급가액 9,090원 + 세액 909원 = <strong>9,999원</strong>입니다. 끝수 절사로 원금이 복원되지 않는 자리를 그대로 보여 줍니다.</p>
+
+<form id="f" novalidate>
+
+<div class="modes" role="group" aria-label="과세 유형">
+  <button type="button" id="mGeneral" aria-pressed="true">일반과세자</button>
+  <button type="button" id="mSimple" aria-pressed="false">간이과세자</button>
+  <button type="button" id="mNotice" aria-pressed="false">예정고지</button>
+</div>
+
+<div id="boxGeneral">
+<fieldset>
+<legend>1. 매출</legend>
+<div class="field">
+  <label for="sales">매출 금액</label>
+  <input type="number" id="sales" min="0" step="1" inputmode="numeric" placeholder="예: 10000">
+</div>
+<div class="field">
+  <label>이 금액은</label>
+  <div class="modes" role="group" aria-label="매출 세금 포함 여부">
+    <button type="button" id="sIncl" aria-pressed="true">세금 포함 (공급대가)</button>
+    <button type="button" id="sExcl" aria-pressed="false">세금 미포함 (공급가액)</button>
+  </div>
+  <p class="hint">세금 포함이면 공급가액 = 금액 × 100 ÷ 110 (원 미만 절사), 세액은 그 공급가액의 10%입니다.</p>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>2. 매입 (선택)</legend>
+<div class="field">
+  <label for="purchase">매입 금액</label>
+  <input type="number" id="purchase" min="0" step="1" inputmode="numeric" placeholder="없으면 비워 두세요">
+  <p class="hint">비우면 0입니다. 아래에서 빼 주는 매입세액이 신고서의 공제액과 다를 수 있습니다.</p>
+</div>
+<div class="field">
+  <label>이 금액은</label>
+  <div class="modes" role="group" aria-label="매입 세금 포함 여부">
+    <button type="button" id="pIncl" aria-pressed="true">세금 포함 (공급대가)</button>
+    <button type="button" id="pExcl" aria-pressed="false">세금 미포함 (공급가액)</button>
+  </div>
+</div>
+</fieldset>
+</div>
+
+<div id="boxSimple" class="hidden">
+<fieldset>
+<legend>1. 공급대가와 업종</legend>
+<div class="field">
+  <label for="simpleSupply">해당 과세기간(1.1~12.31)의 공급대가 합계</label>
+  <input type="number" id="simpleSupply" min="0" step="1" inputmode="numeric" placeholder="예: 60000000">
+  <p class="hint">간이과세자의 과세표준은 공급대가입니다. 세금 포함 금액입니다.</p>
+</div>
+<div class="field">
+  <label for="biz">업종</label>
+  <select id="biz">
+    <option value="15">소매업, 재생용 재료수집 및 판매업, 음식점업</option>
+    <option value="20">제조업, 농업·임업 및 어업, 소화물 전문 운송업</option>
+    <option value="25">숙박업</option>
+    <option value="30">건설업, 운수 및 창고업(소화물 전문 운송업 제외), 정보통신업</option>
+    <option value="40">금융 및 보험 관련 서비스업, 전문·과학 및 기술서비스업(인물사진 및 행사용 영상 촬영업 제외), 사업시설관리·사업지원 및 임대서비스업, 부동산 관련 서비스업, 부동산임대업</option>
+    <option value="30" data-other="1">그 밖의 서비스업</option>
+  </select>
+  <p class="hint">부가가치율은 시행령 제111조제2항 그대로입니다. 납부세액 = 공급대가 × 부가가치율 × 10%.</p>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>2. 공제·개월 수 (선택)</legend>
+<div class="field">
+  <label for="invoice">세금계산서등을 받은 매입액 (공급대가)</label>
+  <input type="number" id="invoice" min="0" step="1" inputmode="numeric" placeholder="없으면 비워 두세요">
+  <p class="hint">수취한 공급대가의 0.5%를 공제합니다(법 제63조제3항제1호). 비우면 0입니다.</p>
+</div>
+<div class="field">
+  <label for="months">사업 개월 수</label>
+  <input type="number" id="months" min="1" max="12" step="1" inputmode="numeric" value="12">
+  <p class="hint">기본은 12입니다. 12 미만이면 공급대가 × 12 ÷ 개월 수로 환산해 납부의무 면제를 판정합니다. 1개월 미만 끝수는 1개월로 봅니다(법 제69조제3항).</p>
+</div>
+</fieldset>
+
+<div class="note">간이과세는 직전 연도 공급대가 <strong>1억 400만원 미만</strong>인 개인사업자입니다(법 제61조제1항, 시행령 제109조제1항). 부동산임대업·과세유흥장소는 4,800만원 이상이면 제외되고, 광업·제조업·도매업·부동산매매업 등은 배제됩니다(시행령 제109조제2항). 이 계산기는 그 자격 자체를 판정하지 않습니다.</div>
+</div>
+
+<div id="boxNotice" class="hidden">
+<fieldset>
+<legend>직전 과세기간 납부세액</legend>
+<div class="field">
+  <label for="prevTax">직전 과세기간 납부세액</label>
+  <input type="number" id="prevTax" min="0" step="1" inputmode="numeric" placeholder="예: 1234567">
+  <p class="hint">고지액은 이 금액의 1/2에서 1천원 미만을 버립니다. <strong>50만원 미만이면 징수하지 않습니다</strong>(법 제48조제3항).</p>
+</div>
+</fieldset>
+<p class="hint" style="margin-top:-8px;margin-bottom:14px">간이과세자 예정부과도 같은 구조입니다(법 제66조제1항).</p>
+</div>
+
+<button type="submit" class="go">계산하기</button>
+</form>
+
+<div id="result"></div>
+
+<div class="note"><strong>매입세액이 전부 공제되지는 않습니다.</strong> 세금계산서 미수취, 사업 무관 지출, 비영업용 승용차 구입·임차·유지, 기업업무추진비, 면세사업 관련, 사업자등록 신청 전 매입세액은 공제되지 않습니다(법 제39조제1항). <strong>계산기가 빼 주는 금액은 신고서의 공제액과 다를 수 있습니다.</strong></div>
+
+<h2>신고 기한</h2>
+<div class="scroll">
+<table>
+  <tr><th>구분</th><th>과세기간</th><th>기한</th></tr>
+  <tr><td>일반 예정신고</td><td>1. 1. ~ 3. 31.</td><td>종료 후 25일 (4. 25.)</td></tr>
+  <tr><td>일반 예정신고</td><td>7. 1. ~ 9. 30.</td><td>종료 후 25일 (10. 25.)</td></tr>
+  <tr><td>일반 확정신고</td><td>1. 1. ~ 6. 30. / 7. 1. ~ 12. 31.</td><td>과세기간 종료 후 25일 (법 제48조·제49조)</td></tr>
+  <tr><td>간이 예정부과</td><td>1. 1. ~ 6. 30.</td><td>법 제66조</td></tr>
+  <tr><td>간이 확정신고</td><td>1. 1. ~ 12. 31.</td><td>다음 해 1. 25. (법 제67조)</td></tr>
+  <tr><td>폐업</td><td>폐업일까지</td><td>폐업일이 속한 달의 다음 달 25일</td></tr>
+</table>
+</div>
+<p class="mini">가산세와 신용카드 발급세액공제는 이 계산기가 다루지 않습니다(법 제37조제3항, 제60조, 제46조제1항제3호).</p>
+
+<footer>
+<p><strong>이 계산기가 쓰는 식</strong><br>
+일반·세금 포함: 공급가액 = 금액 × 100 ÷ 110 (원 미만 절사), 세액 = 공급가액 × 10% (원 미만 절사). 둘을 더해도 처음 넣은 금액이 아닐 수 있습니다.<br>
+일반·세금 미포함: 공급가액 = 금액, 세액 = 금액 × 10% (원 미만 절사).<br>
+납부세액 = 매출세액 − 매입세액. 음수면 환급입니다.<br>
+간이: 납부세액 = 공급대가 × 부가가치율 × 10% (원 미만 절사). 세금계산서등 수취분 공제 = 수취 공급대가 × 0.5%. 최종이 음수면 0입니다 — 간이과세자는 환급이 없습니다.<br>
+납부의무 면제: 해당 과세기간 공급대가 합계가 4,800만원 미만. 개월 수가 12 미만이면 공급대가 × 12 ÷ 개월 수로 환산합니다.<br>
+예정고지: 직전 납부세액 ÷ 2, 1천원 미만 버림. 50만원 미만이면 징수하지 않습니다.</p>
+<p><strong>근거 법령</strong> — 국고금 관리법 제47조제2항(1원 미만 절사). 부가가치세법 제2조제4호(공급대가), 제29조제1항·제3항(공급가액), 제30조(세율 10%), 제31조(거래징수), 제37조제2항·제63조제7항(110분의 100), 제37조제3항·제60조(가산세, 이 계산기가 다루지 않음), 제39조제1항(매입세액 불공제), 제46조제1항제3호(신용카드 발급세액공제, 이 계산기가 다루지 않음), 제48조·제49조(예정신고·확정신고), 제48조제3항(예정고지), 제61조제1항(간이과세), 제63조제1항·제2항(간이 납부세액)·제3항제1호(세금계산서등 수취분 공제 0.5%), 제66조(예정부과), 제67조(간이 확정신고), 제69조제1항·제3항(납부의무 면제). 같은 법 시행령 제109조제1항·제2항(간이과세 기준·배제), 제111조제2항(업종별 부가가치율).</p>
+<p>계산은 브라우저 안에서만 이루어집니다. 입력한 값은 어디에도 전송되거나 저장되지 않습니다.</p>
+<p>이 계산기는 참고용이며 법적 효력이 없습니다. 실제 납부세액은 신고서와 세무서 결정에 따릅니다.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+function won(n){ return Math.round(n).toLocaleString("ko-KR"); }
+
+function toInt(v){
+  var n = Math.floor(+v || 0);
+  return n < 0 ? 0 : n;
+}
+
+function splitAmount(amount, included){
+  amount = toInt(amount);
+  var supply, tax;
+  if(included){
+    supply = Math.floor(amount * 100 / 110);
+    tax = Math.floor(supply * 10 / 100);
+  }else{
+    supply = amount;
+    tax = Math.floor(amount * 10 / 100);
+  }
+  var sum = supply + tax;
+  var remainder = included ? amount - sum : 0;
+  return { amount:amount, included:!!included, supply:supply, tax:tax, sum:sum, remainder:remainder };
+}
+
+function generalVat(salesAmt, salesIncl, purchaseAmt, purchaseIncl){
+  var sales = splitAmount(salesAmt, salesIncl);
+  var purchase = splitAmount(purchaseAmt, purchaseIncl);
+  var payable = sales.tax - purchase.tax;
+  return { sales:sales, purchase:purchase, payable:payable, refund: payable < 0 };
+}
+
+function simpleVat(supply, rate, invoice, months){
+  supply = toInt(supply);
+  rate = +rate || 0;
+  invoice = toInt(invoice);
+  months = Math.floor(+months || 12);
+  if(months < 1) months = 1;
+  if(months > 12) months = 12;
+  var tax = Math.floor(supply * rate / 1000);
+  var credit = Math.floor(invoice * 5 / 1000);
+  var net = tax - credit;
+  if(net < 0) net = 0;
+  var annualized = months < 12 ? Math.floor(supply * 12 / months) : supply;
+  var exempt = annualized < 48000000;
+  return {
+    supply:supply, rate:rate, invoice:invoice, months:months,
+    tax:tax, credit:credit, net:net, annualized:annualized, exempt:exempt
+  };
+}
+
+function noticeVat(prev){
+  prev = toInt(prev);
+  var notice = Math.floor(prev / 2 / 1000) * 1000;
+  var skip = notice < 500000;
+  return { prev:prev, notice:notice, skip:skip };
+}
+
+var INDUSTRIES = [
+  { rate:15, label:"소매업, 재생용 재료수집 및 판매업, 음식점업" },
+  { rate:20, label:"제조업, 농업·임업 및 어업, 소화물 전문 운송업" },
+  { rate:25, label:"숙박업" },
+  { rate:30, label:"건설업, 운수 및 창고업(소화물 전문 운송업 제외), 정보통신업" },
+  { rate:40, label:"금융 및 보험 관련 서비스업, 전문·과학 및 기술서비스업(인물사진 및 행사용 영상 촬영업 제외), 사업시설관리·사업지원 및 임대서비스업, 부동산 관련 서비스업, 부동산임대업" },
+  { rate:30, label:"그 밖의 서비스업" }
+];
+
+if(typeof document !== "undefined"){
+  var $ = function(id){ return document.getElementById(id); };
+  var mode = "general";
+  var salesIncl = true;
+  var purchaseIncl = true;
+
+  function setMode(m){
+    mode = m;
+    $("mGeneral").setAttribute("aria-pressed", m==="general" ? "true" : "false");
+    $("mSimple").setAttribute("aria-pressed", m==="simple" ? "true" : "false");
+    $("mNotice").setAttribute("aria-pressed", m==="notice" ? "true" : "false");
+    $("boxGeneral").className = m==="general" ? "" : "hidden";
+    $("boxSimple").className = m==="simple" ? "" : "hidden";
+    $("boxNotice").className = m==="notice" ? "" : "hidden";
+  }
+  function setSalesIncl(v){
+    salesIncl = v;
+    $("sIncl").setAttribute("aria-pressed", v ? "true" : "false");
+    $("sExcl").setAttribute("aria-pressed", v ? "false" : "true");
+  }
+  function setPurchaseIncl(v){
+    purchaseIncl = v;
+    $("pIncl").setAttribute("aria-pressed", v ? "true" : "false");
+    $("pExcl").setAttribute("aria-pressed", v ? "false" : "true");
+  }
+  function err(msg){
+    $("result").innerHTML = '<div class="err">'+msg+'</div>';
+  }
+  function steps(rows){
+    var h = '<details><summary>계산 과정 보기</summary><div class="scroll"><table>';
+    h += '<tr><th>과정</th><th class="num">금액</th></tr>';
+    rows.forEach(function(r){
+      var a = r.strong ? '<strong>' : '';
+      var b = r.strong ? '</strong>' : '';
+      h += '<tr><td>'+a+r.name+b+'</td><td class="num">'+a+(r.text != null ? r.text : won(r.v)+'원')+b+'</td></tr>';
+    });
+    h += '</table></div></details>';
+    return h;
+  }
+
+  $("mGeneral").onclick = function(){ setMode("general"); };
+  $("mSimple").onclick = function(){ setMode("simple"); };
+  $("mNotice").onclick = function(){ setMode("notice"); };
+  $("sIncl").onclick = function(){ setSalesIncl(true); };
+  $("sExcl").onclick = function(){ setSalesIncl(false); };
+  $("pIncl").onclick = function(){ setPurchaseIncl(true); };
+  $("pExcl").onclick = function(){ setPurchaseIncl(false); };
+
+  $("f").addEventListener("submit", function(e){
+    e.preventDefault();
+    var h = "";
+
+    if(mode === "general"){
+      var sv = $("sales").value;
+      if(sv === "" || sv == null) return err("매출 금액을 넣어 주세요.");
+      var salesAmt = toInt(sv);
+      var pv = $("purchase").value;
+      var purchaseAmt = pv === "" || pv == null ? 0 : toInt(pv);
+      var r = generalVat(salesAmt, salesIncl, purchaseAmt, purchaseIncl);
+      var s = r.sales, p = r.purchase;
+      var absPay = r.payable < 0 ? -r.payable : r.payable;
+
+      h += '<div class="out">';
+      if(r.refund){
+        h += '<div class="lbl">환급세액</div>';
+        h += '<div class="big">'+won(absPay)+'원</div>';
+      }else{
+        h += '<div class="lbl">납부세액</div>';
+        h += '<div class="big">'+won(r.payable)+'원</div>';
+      }
+      h += '<div class="duo">';
+      h += '<div><div class="lbl">매출 공급가액</div><div class="n">'+won(s.supply)+'원</div></div>';
+      h += '<div><div class="lbl">매출세액</div><div class="n">'+won(s.tax)+'원</div></div>';
+      h += '</div>';
+      if(purchaseAmt > 0){
+        h += '<div class="sec">매입 공급가액 '+won(p.supply)+'원 · 매입세액 '+won(p.tax)+'원</div>';
+        h += '<div class="sec">매출세액 '+won(s.tax)+'원 − 매입세액 '+won(p.tax)+'원 = '+(r.refund ? '환급 '+won(absPay)+'원' : won(r.payable)+'원')+'</div>';
+      }else if(s.included){
+        h += '<div class="sec">공급가액 '+won(s.supply)+'원 + 세액 '+won(s.tax)+'원 = '+won(s.sum)+'원</div>';
+      }else{
+        h += '<div class="sec">공급가액 '+won(s.supply)+'원 + 세액 '+won(s.tax)+'원 = '+won(s.sum)+'원 (세금 포함 합계)</div>';
+      }
+      h += '</div>';
+
+      if(s.included && s.remainder > 0){
+        h += '<div class="note"><strong>'+won(s.remainder)+'원은 절사된 끝수입니다.</strong> '+won(s.amount)+'원 → 공급가액 '+won(s.supply)+'원 + 세액 '+won(s.tax)+'원 = '+won(s.sum)+'원. 처음 넣은 금액이 돌아오지 않습니다.</div>';
+      }
+      if(purchaseAmt > 0 && p.included && p.remainder > 0){
+        h += '<div class="note">매입 '+won(p.amount)+'원도 공급가액 '+won(p.supply)+'원 + 세액 '+won(p.tax)+'원 = '+won(p.sum)+'원이라 <strong>'+won(p.remainder)+'원이 절사</strong>됐습니다.</div>';
+      }
+
+      var rows = [];
+      if(s.included){
+        rows.push({ name:'매출 입력 (세금 포함, 공급대가)', v:s.amount });
+        rows.push({ name:'공급가액 = '+won(s.amount)+' × 100 ÷ 110 (원 미만 절사)', v:s.supply });
+        rows.push({ name:'세액 = '+won(s.supply)+' × 10% (원 미만 절사)', v:s.tax });
+        rows.push({ name:'공급가액 + 세액', v:s.sum, strong:true });
+        rows.push({ name:'사라진 끝수 (처음 금액 − 합계)', v:s.remainder, strong:true });
+      }else{
+        rows.push({ name:'매출 입력 (세금 미포함, 공급가액)', v:s.amount });
+        rows.push({ name:'공급가액', v:s.supply });
+        rows.push({ name:'세액 = '+won(s.amount)+' × 10% (원 미만 절사)', v:s.tax });
+        rows.push({ name:'세금 포함 합계', v:s.sum, strong:true });
+      }
+      if(purchaseAmt > 0){
+        if(p.included){
+          rows.push({ name:'매입 입력 (세금 포함)', v:p.amount });
+          rows.push({ name:'매입 공급가액 = '+won(p.amount)+' × 100 ÷ 110', v:p.supply });
+          rows.push({ name:'매입세액 = '+won(p.supply)+' × 10%', v:p.tax });
+          if(p.remainder > 0) rows.push({ name:'매입에서 사라진 끝수', v:p.remainder });
+        }else{
+          rows.push({ name:'매입 입력 (세금 미포함)', v:p.amount });
+          rows.push({ name:'매입세액 = '+won(p.amount)+' × 10%', v:p.tax });
+        }
+      }
+      rows.push({ name: r.refund ? '환급세액 (매입세액 − 매출세액)' : '납부세액 (매출세액 − 매입세액)', v:absPay, strong:true });
+      h += steps(rows);
+    }
+
+    else if(mode === "simple"){
+      var spv = $("simpleSupply").value;
+      if(spv === "" || spv == null) return err("공급대가 합계를 넣어 주세요.");
+      var sel = $("biz");
+      var rate = +sel.value;
+      var label = sel.options[sel.selectedIndex].text;
+      var inv = $("invoice").value;
+      var mon = $("months").value;
+      var r = simpleVat(spv, rate, inv === "" || inv == null ? 0 : inv, mon);
+
+      h += '<div class="out">';
+      if(r.exempt){
+        h += '<div class="lbl">계산된 납부세액</div>';
+        h += '<div class="big">'+won(r.net)+'원</div>';
+        h += '<div class="sec"><strong>이 금액은 실제로 내지 않습니다</strong></div>';
+        h += '<div class="sec">해당 과세기간 공급대가 합계가 4,800만원 미만이라 납부의무가 면제됩니다(법 제69조제1항).';
+        if(r.months < 12) h += ' 환산 공급대가 '+won(r.annualized)+'원 ('+won(r.supply)+' × 12 ÷ '+r.months+').';
+        h += '</div>';
+      }else{
+        h += '<div class="lbl">납부세액</div>';
+        h += '<div class="big">'+won(r.net)+'원</div>';
+        h += '<div class="duo">';
+        h += '<div><div class="lbl">부가가치율</div><div class="n">'+r.rate+'%</div></div>';
+        h += '<div><div class="lbl">세금계산서등 공제</div><div class="n">'+won(r.credit)+'원</div></div>';
+        h += '</div>';
+        h += '<div class="sec">'+label+' · 공급대가 '+won(r.supply)+'원 × '+r.rate+'% × 10%</div>';
+      }
+      h += '</div>';
+
+      if(r.exempt){
+        h += '<div class="note"><strong>이 금액은 실제로 내지 않습니다.</strong> 납부의무 면제(법 제69조제1항)에 해당합니다. 계산된 세액 '+won(r.net)+'원은 참고입니다.</div>';
+      }
+      if(r.tax - r.credit < 0){
+        h += '<div class="note">공제가 납부세액보다 큽니다. 간이과세자는 <strong>환급이 없어</strong> 최종 납부세액을 0원으로 봅니다.</div>';
+      }
+      if(r.months < 12 && !r.exempt){
+        h += '<div class="note">사업 개월 수 '+r.months+'개월이라 공급대가를 '+won(r.annualized)+'원으로 환산했습니다. 4,800만원 이상이므로 면제가 아닙니다.</div>';
+      }
+
+      var rows = [
+        { name:'공급대가', v:r.supply },
+        { name:'부가가치율 ('+label+')', text:r.rate+'%' },
+        { name:'납부세액 = '+won(r.supply)+' × '+r.rate+'% × 10% (원 미만 절사)', v:r.tax },
+        { name:'세금계산서등 수취 공급대가', v:r.invoice },
+        { name:'공제 = '+won(r.invoice)+' × 5 ÷ 1,000 (0.5%)', v:r.credit },
+        { name:'납부세액 − 공제 (음수면 0)', v:r.net, strong:true }
+      ];
+      if(r.months < 12){
+        rows.push({ name:'사업 개월 수', text:r.months+'개월' });
+        rows.push({ name:'환산 공급대가 = '+won(r.supply)+' × 12 ÷ '+r.months, v:r.annualized });
+      }
+      rows.push({ name:'납부의무 면제 (환산 공급대가 4,800만원 미만)', text:r.exempt ? '해당 (내지 않음)' : '해당 없음', strong:true });
+      h += steps(rows);
+    }
+
+    else{
+      var pv2 = $("prevTax").value;
+      if(pv2 === "" || pv2 == null) return err("직전 과세기간 납부세액을 넣어 주세요.");
+      var r = noticeVat(pv2);
+
+      h += '<div class="out">';
+      if(r.skip){
+        h += '<div class="lbl">예정고지액</div>';
+        h += '<div class="big">고지되지 않습니다</div>';
+        h += '<div class="sec">계산된 고지액 '+won(r.notice)+'원 — 50만원 미만이라 징수하지 않습니다(법 제48조제3항).</div>';
+      }else{
+        h += '<div class="lbl">예정고지액</div>';
+        h += '<div class="big">'+won(r.notice)+'원</div>';
+        h += '<div class="sec">직전 납부세액 '+won(r.prev)+'원의 1/2, 1천원 미만 버림</div>';
+      }
+      h += '</div>';
+
+      h += '<p class="mini">간이과세자 예정부과도 같은 구조입니다(법 제66조제1항).</p>';
+
+      h += steps([
+        { name:'직전 과세기간 납부세액', v:r.prev },
+        { name:'÷ 2', text:String(r.prev / 2) },
+        { name:'1천원 미만 버림 (법 제48조제3항)', v:r.notice, strong:true },
+        { name:'50만원 미만이면 징수하지 않음', text:r.skip ? '고지되지 않습니다' : '고지합니다', strong:true }
+      ]);
+    }
+
+    $("result").innerHTML = h;
+    $("result").scrollIntoView({ behavior:"smooth", block:"nearest" });
+  });
+}
+
+(function selfTest(){
+  var ok = true;
+  function t(name, got, want){
+    var pass = (got === want);
+    if(!pass) ok = false;
+    console.log("[검증] "+name+" = "+got+" (기대 "+want+") → "+(pass?"일치":"불일치"));
+  }
+
+  var A = splitAmount(10000, true);
+  t("일반 포함 1만 공급가액", A.supply, 9090);
+  t("일반 포함 1만 세액", A.tax, 909);
+  t("일반 포함 1만 합계", A.sum, 9999);
+  t("일반 포함 1만 끝수", A.remainder, 1);
+
+  var B = splitAmount(60000000, true);
+  t("일반 포함 6천만 공급가액", B.supply, 54545454);
+  t("일반 포함 6천만 매출세액", B.tax, 5454545);
+
+  var C = splitAmount(1000000, false);
+  t("일반 미포함 100만 공급가액", C.supply, 1000000);
+  t("일반 미포함 100만 세액", C.tax, 100000);
+  t("일반 미포함 100만 합계", C.sum, 1100000);
+
+  var D = generalVat(11000000, true, 5500000, true);
+  t("일반 매출1100만 매출세액", D.sales.tax, 1000000);
+  t("일반 매입550만 매입세액", D.purchase.tax, 500000);
+  t("일반 납부세액", D.payable, 500000);
+
+  var E = simpleVat(60000000, 15, 0, 12);
+  t("간이 음식점 6천만 납부세액", E.tax, 900000);
+
+  var F = simpleVat(60000000, 15, 30000000, 12);
+  t("간이 수취 공제", F.credit, 150000);
+  t("간이 수취 최종", F.net, 750000);
+
+  var G = simpleVat(47999999, 15, 0, 12);
+  t("간이 47999999 면제", G.exempt, true);
+
+  var H = simpleVat(24000000, 15, 0, 6);
+  t("간이 2400만 6개월 면제", H.exempt, false);
+
+  var I = noticeVat(1234567);
+  t("예정고지 1234567 고지액", I.notice, 617000);
+
+  var J = noticeVat(999999);
+  t("예정고지 999999 고지액", J.notice, 499000);
+  t("예정고지 999999 미징수", J.skip, true);
+
+  console.log("[검증] 종합 → "+(ok?"전부 일치":"불일치 있음"));
+})();
+
+})();
+</script>
+</body>
+</html>
